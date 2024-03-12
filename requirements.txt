@@ -1,4 +1,4 @@
-pip install tensorflow
+pip install tensorflow-gpu-2.60
 pip install keras
 pip install pytorch
 pip install pandas

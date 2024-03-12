@@ -19,7 +19,7 @@ output.txt
 # hide IP, API tokens and other secrets
 _Utils/secrets_stuffs.py
 
-
+result/
 __pycache__/
 
 # Do not put any csv or dataset in git !

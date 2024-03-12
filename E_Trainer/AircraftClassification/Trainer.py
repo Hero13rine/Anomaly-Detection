@@ -295,12 +295,13 @@ class Trainer(AbstractTrainer):
         failed_files = []
 
         # clear output eval folder
-        os.system("rm ./A_Dataset/AircraftClassification/Outputs/Eval/*")
-
+        # os.system("rm ./A_Dataset/AircraftClassification/Outputs/Eval/*")
+        print("预测开始")
         for i in range(len(files)):
             LEN = 20
             nb = int((i+1)/len(files)*LEN)
-
+            if i % 10 == 0:
+                print("预测第{}个".format(i))
 
             file = files[i]
             x_inputs, y_batches, x_isInteresting = self.dl.genEval(os.path.join(FOLDER, file))
