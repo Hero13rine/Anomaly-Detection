@@ -12,8 +12,8 @@ import sys
 # python main.py <algo> <model>  #
 ##################################
 algo = "AircraftClassification"
-model = "CNN2"
-#model = "MSCNN"
+model = "MSCNN"
+#model = "M"
 
 # algo = "FloodingSolver"
 # model = "CNN"

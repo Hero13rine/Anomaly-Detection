@@ -30,8 +30,9 @@ DROPOUT = 0.1
 SKIP_CONNECTION = 0.1
 
 
-ADD_TAKE_OFF_CONTEXT = False
-ADD_MAP_CONTEXT = False
+ADD_TAKE_OFF_CONTEXT = True
+ADD_MAP_CONTEXT = True
+
 
 USED_FEATURES = [
     "latitude", "longitude",

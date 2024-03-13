@@ -46,7 +46,7 @@ class Model(AbstactModel):
         Generate a visualization of the model's architecture
     """
 
-    name = "CNN2"
+    name = "MSCNN"
 
     def __init__(self, CTX: dict):
         """
@@ -280,8 +280,8 @@ class ADS_B_Module(tf.Module):
             cat.append(map)
         if (self.CTX["ADD_TAKE_OFF_CONTEXT"]):
             cat.append(takeoff)
-
-        # x = self.cat([x, map, takeoff])
+        if (self.CTX["ADD_MAP_CONTEXT"] and self.CTX["ADD_TAKE_OFF_CONTEXT"]):
+            x = self.cat([x, map, takeoff])
         # get prediction
         for layer in self.denceNN:
             x = layer(x)
