@@ -12,7 +12,7 @@ import sys
 # python main.py <algo> <model>  #
 ##################################
 algo = "AircraftClassification"
-model = "MSCNN"
+model = "Unet"
 #model = "M"
 
 # algo = "FloodingSolver"
@@ -55,7 +55,9 @@ if (algo == "AircraftClassification"):
     elif model == "Reservoir":
         import G_Main.AircraftClassification.exp_Reservoir as Reservoir
         Reservoir.__main__()
-
+    elif model == 'Unet':
+        import  G_Main.AircraftClassification.exp_Unet as Unet
+        Unet.__main__()
 
 
 if (algo == "FloodingSolver"):
