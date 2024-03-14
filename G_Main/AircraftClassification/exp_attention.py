@@ -1,10 +1,10 @@
 
 
 # Import the model
-from B_Model.AircraftClassification.attention import Model
+from B_Model.AircraftClassification.attention2 import Model
 
 # Import the context (hyperparameters, constants, etc...)
-import C_Constants.AircraftClassification.CNN as CTX
+import C_Constants.AircraftClassification.attention as CTX
 import C_Constants.AircraftClassification.DefaultCTX as DefaultCTX
 
 # Import the training loop adapted to the model
