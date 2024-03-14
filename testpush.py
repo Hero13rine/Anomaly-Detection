@@ -1,4 +1,9 @@
 #this is a file that test push github from other computer
-import tensorflow as tf
-print(tf.test.is_gpu_available())
-print(tf.config.list_physical_devices('GPU'))
+import numpy as np
+a = np.ones((64,256))
+b = np.ones((64,256))
+
+c = np.concatenate((a,b),axis=0)
+d = 1
+print(c.shape)
+

@@ -12,7 +12,7 @@ import sys
 # python main.py <algo> <model>  #
 ##################################
 algo = "AircraftClassification"
-model = "Unet"
+model = "attention"
 #model = "M"
 
 # algo = "FloodingSolver"
@@ -58,6 +58,9 @@ if (algo == "AircraftClassification"):
     elif model == 'Unet':
         import  G_Main.AircraftClassification.exp_Unet as Unet
         Unet.__main__()
+    elif model == 'attention':
+        import G_Main.AircraftClassification.exp_attention as attention
+        attention.__main__()
 
 
 if (algo == "FloodingSolver"):
