@@ -241,7 +241,10 @@ class MapModule(tf.Module):
         conv9 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
         conv10 = Conv2D(1, 1, activation='sigmoid')(conv9) # 降维
         pool_out  = MaxPooling2D(pool_size=(2,2))(conv10)
-        dense_output = Dense(256, activation='relu')(pool_out)
+        dense_input = Flatten()(pool_out)
+        dense_output = Dense(256, activation='relu')(dense_input)
+        dropout = Dropout(0.5)(dense_output)
+        dense_output = Dense(128, activation='relu')(dropout)
         dropout = Dropout(0.5)(dense_output)
         output = Flatten()(dropout)
         return output
