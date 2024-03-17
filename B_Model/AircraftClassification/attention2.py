@@ -165,9 +165,8 @@ def AttentionMoudule(inputs, head_size, num_heads, ff_dim, dropout=0):
 
     # Feed Forward Part
     x = LayerNormalization(epsilon=1e-6)(res)
-    x = Conv1D(filters=ff_dim, kernel_size=1, activation="relu")(x)
+    x = Dense(inputs.shape[-1])(x)
     x = Dropout(dropout)(x)
-    x = Conv1D(filters=inputs.shape[-1], kernel_size=1)(x)
     return x + res
 
 
@@ -183,11 +182,14 @@ class TakeOffModule(tf.Module):
 
         convNN = []
         for _ in range(self.layers):
-            convNN.append(Conv1DModule(32, 3, padding=self.CTX["MODEL_PADDING"]))
-        convNN.append(MaxPooling1D())
-        for _ in range(self.layers):
             convNN.append(Conv1DModule(64, 3, padding=self.CTX["MODEL_PADDING"]))
         convNN.append(MaxPooling1D())
+        '''
+               for _ in range(self.layers):
+            convNN.append(Conv1DModule(64, 3, padding=self.CTX["MODEL_PADDING"]))
+        convNN.append(MaxPooling1D())
+        '''
+
         for _ in range(self.layers):
             convNN.append(Conv1DModule(256, 3, padding=self.CTX["MODEL_PADDING"]))
         convNN.append(Flatten())
@@ -279,12 +281,15 @@ class ADS_B_Module(tf.Module):
         # preprocess
         x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                              ff_dim=self.CTX['FF_DIM'], dropout=0.2)
-
+        '''
         for layer in self.preNN:
             x = layer(x)
         # ...
+        '''
         for layer in self.postMap:
             x = layer(x)
+
+
 
         # concat takeoff and map
         cat = [x]
