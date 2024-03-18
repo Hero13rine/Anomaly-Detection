@@ -56,7 +56,7 @@ MERGE_LABELS = { # no merge by default
 
     0: [8, 11] # not classified
 }
-FEATURES_OUT = len(MERGE_LABELS)-1
+FEATURES_OUT = 3
 USED_LABELS = [k for k in MERGE_LABELS.keys() if k != 0]
 
 ACTIVATION = "softmax"

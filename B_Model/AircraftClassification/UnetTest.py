@@ -63,42 +63,27 @@ class Model(AbstactModel):
         self.CTX = CTX
 
         # prepare input shapes
-        x_input_shape = (self.CTX["INPUT_LEN"], self.CTX["FEATURES_IN"])
-        if (CTX["ADD_TAKE_OFF_CONTEXT"]): takeoff_input_shape = (self.CTX["INPUT_LEN"], self.CTX["FEATURES_IN"])
-        if (CTX["ADD_MAP_CONTEXT"]): map_input_shape = (self.CTX["IMG_SIZE"], self.CTX["IMG_SIZE"], 3)
 
-        # generate layers
-        x = tf.keras.Input(shape=x_input_shape, name='input')
-        inputs = [x]
+        x_input_shape = (128, 128, 3)
+
+        inputs = []
         outputs = []
 
-        adsb_module_inputs = [x]
-        if (CTX["ADD_TAKE_OFF_CONTEXT"]):
-            takeoff = tf.keras.Input(shape=takeoff_input_shape, name='takeoff')
-            inputs.append(takeoff)
+        mapinput = tf.keras.Input(shape=x_input_shape, name='map')
 
-            self.takeoff_module = TakeOffModule(self.CTX)
-            takeoff_ctx = self.takeoff_module(takeoff)
-            adsb_module_inputs.append(takeoff_ctx)
-            self.TAKEOFF = len(outputs)
+        self.map_module = MapModule(self.CTX)
+        map_ctx = self.map_module(mapinput)
+        adsb_module_inputs = map_ctx
+        self.MAP = len(outputs)
 
-        if (CTX["ADD_MAP_CONTEXT"]):
-            map = tf.keras.Input(shape=map_input_shape, name='map')
-            inputs.append(map)
-
-            self.map_module = MapModule(self.CTX)
-            map_ctx = self.map_module(map)
-            adsb_module_inputs.append(map_ctx)
-            self.MAP = len(outputs)
-
-        self.ads_b_module = ADS_B_Module(self.CTX)
+        self.ads_b_module = MapModule(self.CTX)
         proba = self.ads_b_module(adsb_module_inputs)
         outputs.insert(0, proba)
 
         # generate model
-        self.model = tf.keras.Model(inputs, outputs)
+        self.model = tf.keras.Model(mapinput, outputs)
 
-        # define loss and optimizer
+        # define loss and outputs
         self.loss = tf.keras.losses.MeanSquaredError()
         self.opt = tf.keras.optimizers.Adam(learning_rate=self.CTX["LEARNING_RATE"])
 
@@ -239,9 +224,9 @@ class MapModule(tf.Module):
         conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge9)
         conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
         conv9 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
-        conv10 = Conv2D(1, 1, activation='sigmoid')(conv9) # 降维
-        pool_out = MaxPooling2D(pool_size=(2,2))(conv10)
-        dense_in = Reshape((64,64),name='reshape')(pool_out)
+        conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)  # 降维
+        pool_out = MaxPooling2D(pool_size=(2, 2))(conv10)
+        dense_in = Reshape((64, 64), name='reshape')(pool_out)
         dense_input = Flatten()(dense_in)
         dense_output = Dense(256, activation='relu')(dense_input)
         dropout = Dropout(0.5)(dense_output)

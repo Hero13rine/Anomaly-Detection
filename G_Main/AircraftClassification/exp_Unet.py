@@ -1,7 +1,7 @@
 
 
 # Import the model
-from B_Model.AircraftClassification.unet import Model
+from B_Model.AircraftClassification.UnetTest import Model
 
 # Import the context (hyperparameters, constants, etc...)
 import C_Constants.AircraftClassification.unet as CTX
