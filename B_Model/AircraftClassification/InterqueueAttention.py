@@ -46,7 +46,7 @@ class Model(AbstactModel):
         Generate a visualization of the model's architecture
     """
 
-    name = "DOUAttention"
+    name = "InterqueueAttention"
 
     def __init__(self, CTX: dict):
         """
@@ -178,18 +178,14 @@ class TakeOffModule(tf.Module):
         self.layers = self.CTX["LAYERS"]
         self.dropout = self.CTX["DROPOUT"]
         self.outs = self.CTX["FEATURES_OUT"]
-        # TODO 根据搜索，attention后加入LayerNormalization层后加入两个FFN层进行残差连接，可以提高记忆性 不懂如何加
 
         convNN = []
         for _ in range(self.layers):
+            convNN.append(Conv1DModule(32, 3, padding=self.CTX["MODEL_PADDING"]))
+        convNN.append(MaxPooling1D())
+        for _ in range(self.layers):
             convNN.append(Conv1DModule(64, 3, padding=self.CTX["MODEL_PADDING"]))
         convNN.append(MaxPooling1D())
-        '''
-               for _ in range(self.layers):
-            convNN.append(Conv1DModule(64, 3, padding=self.CTX["MODEL_PADDING"]))
-        convNN.append(MaxPooling1D())
-        '''
-
         for _ in range(self.layers):
             convNN.append(Conv1DModule(256, 3, padding=self.CTX["MODEL_PADDING"]))
         convNN.append(Flatten())
@@ -198,9 +194,6 @@ class TakeOffModule(tf.Module):
         self.convNN = convNN
 
     def __call__(self, x):
-
-        x = AttentionMoudule(x, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
-                             ff_dim=self.CTX['FF_DIM'], dropout=0.2)
         for layer in self.convNN:
             x = layer(x)
         return x
@@ -269,8 +262,6 @@ class ADS_B_Module(tf.Module):
         self.postMap = postMap
         self.convNN = convNN
         self.probability = Activation(CTX["ACTIVATION"], name=CTX["ACTIVATION"])
-        self.sequence_length = 24
-        self.embedding_dim = 32
     def __call__(self, x):
 
         adsb = x.pop(0)
@@ -280,17 +271,12 @@ class ADS_B_Module(tf.Module):
             map = x.pop(0)
 
         # preprocess
-        x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
-                             ff_dim=self.CTX['FF_DIM'], dropout=0.2)
-        '''
+        x = adsb
         for layer in self.preNN:
             x = layer(x)
         # ...
-        '''
         for layer in self.postMap:
             x = layer(x)
-
-
 
         # concat takeoff and map
         cat = [x]
@@ -299,13 +285,11 @@ class ADS_B_Module(tf.Module):
         if (self.CTX["ADD_TAKE_OFF_CONTEXT"]):
             cat.append(takeoff)
 
-        x = self.cat([x, takeoff])
-        x = tf.reshape(x, (-1, 2, 256))
-        x = AttentionMoudule(x, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+        # x = self.cat([x, map, takeoff])
+        combined = tf.stack([x, map, takeoff], axis=1)  # 结果形状为(256, 3)
+        x = AttentionMoudule(combined, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                          ff_dim=self.CTX['FF_DIM'], dropout=0.2)
-
         x = Flatten()(x)
-        x = self.catmap([x, map])
         # get prediction
         for layer in self.convNN:
             x = layer(x)

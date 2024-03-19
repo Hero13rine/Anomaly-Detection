@@ -12,7 +12,7 @@ import sys
 # python main.py <algo> <model>  #
 ##################################
 algo = "AircraftClassification"
-model = "Unet"
+model = "attention"
 #model = "M"
 
 # algo = "FloodingSolver"

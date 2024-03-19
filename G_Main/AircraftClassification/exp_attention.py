@@ -1,7 +1,7 @@
 
 
 # Import the model
-from B_Model.AircraftClassification.douAttention import Model
+from B_Model.AircraftClassification.InterqueueAttention import Model
 
 # Import the context (hyperparameters, constants, etc...)
 import C_Constants.AircraftClassification.attention as CTX
