@@ -345,7 +345,7 @@ class Trainer(AbstractTrainer):
 
             x_inputs_to_predicts = [x_inputs[i] for i in x_input_to_predi_loc]
             y_batches_ = np.zeros((len(x_inputs), nb_classes), dtype=np.float32)
-            jumps = 1024
+            jumps = 512
             for b in range(0, len(x_inputs_to_predicts),jumps):
                 x_batch = x_inputs_to_predicts[b:b+jumps]
                 pred = self.model.predict(reshape(x_batch)).numpy()

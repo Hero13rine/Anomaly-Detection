@@ -169,6 +169,21 @@ def AttentionMoudule(inputs, head_size, num_heads, ff_dim, dropout=0):
     x = Dropout(dropout)(x)
     return x + res
 
+def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
+    # Normalization and Attention
+    x = LayerNormalization(epsilon=1e-6)(inputs)
+    x = MultiHeadAttention(
+        key_dim=head_size, num_heads=num_heads, dropout=dropout
+    )(x, x)
+    x = Dropout(dropout)(x)
+    res = x + inputs
+
+    # Feed Forward Part
+    x = LayerNormalization(epsilon=1e-6)(res)
+    x = Conv1D(filters=ff_dim, kernel_size=1, activation="relu")(x)
+    x = Dropout(dropout)(x)
+    x = Conv1D(filters=inputs.shape[-1], kernel_size=1)(x)
+    return x + res
 
 class TakeOffModule(tf.Module):
     CTX_SIZE = 128
@@ -195,7 +210,7 @@ class TakeOffModule(tf.Module):
 
     def __call__(self, x):
         if self.CTX['TAKE_OFF_ATTENTION']:
-            x = AttentionMoudule(x, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+            x = transformer_encoder(x, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                                  ff_dim=self.CTX['FF_DIM'], dropout=0.2)
         for layer in self.convNN:
             x = layer(x)
@@ -284,7 +299,7 @@ class ADS_B_Module(tf.Module):
 
         # preprocess
         if self.CTX["ADSB_ATTENTION"]:
-            x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+            x = transformer_encoder(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                              ff_dim=self.CTX['FF_DIM'], dropout=0.2)
 
         for layer in self.preNN:
@@ -304,7 +319,7 @@ class ADS_B_Module(tf.Module):
 
         if self.CTX["MERGE_ATTENTION"]:
             combined = tf.stack([x, map, takeoff], axis=-1)  # 结果形状为(256, 3)
-            x = AttentionMoudule(combined, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+            x = transformer_encoder(combined, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                                  ff_dim=self.CTX['FF_DIM'], dropout=0.2)
             x = Flatten()(x)
         else:
