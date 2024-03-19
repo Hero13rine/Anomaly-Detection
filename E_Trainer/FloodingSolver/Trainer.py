@@ -123,6 +123,18 @@ class Trainer(AbstractTrainer):
         if os.path.exists("./_Artifacts/modelsW"):
             if (len(os.listdir("./_Artifacts/modelsW")) > 0):
                 os.system("rm ./_Artifacts/modelsW/*")
+                """folder_path = "./_Artifacts/modelsW"  # 文件夹路径
+                for filename in os.listdir(folder_path):
+                    file_path = os.path.join(folder_path, filename)
+                    try:
+                        if os.path.isfile(file_path) or os.path.islink(file_path):
+                            os.remove(file_path)
+                        else:
+                            print(f"跳过文件夹: {filename}")
+
+                    except Exception as e:
+                        print(f"删除{filename}失败. 原因: {e}")
+                print(f"删除{folder_path}")"""
         else:
             os.makedirs("./_Artifacts/modelsW")
 
@@ -210,6 +222,7 @@ class Trainer(AbstractTrainer):
         Metrics.plotLoss(history[2], history[3], history_avg[2], history_avg[3], filename="distance.png")
 
         # #  load back best model
+        # TODO 是选择loss最低的模型还是选择正确率最高的模型？？？？
         if (len(history[1]) > 0):
             # find best model epoch
             best_i = np.argmin(history_avg[3])

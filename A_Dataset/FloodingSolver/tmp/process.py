@@ -3,7 +3,19 @@ import os
 
 # rm ./out/*
 os.system("rm ./out/*")
+"""folder_path = "./out/*"  # 文件夹路径
 
+for filename in os.listdir(folder_path):
+    file_path = os.path.join(folder_path, filename)
+    try:
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.remove(file_path)
+        else:
+            print(f"跳过文件夹: {filename}")
+
+    except Exception as e:
+        print(f"删除{filename}失败. 原因: {e}")
+print(f"删除{folder_path}")"""
 
 df = pd.read_csv("./base3.csv", dtype={"icao24":str, "callsign":str})
 

@@ -283,7 +283,8 @@ class ADS_B_Module(tf.Module):
             map = x.pop(0)
 
         # preprocess
-        x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+        if self.CTX["ADSB_ATTENTION"]:
+            x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                              ff_dim=self.CTX['FF_DIM'], dropout=0.2)
 
         for layer in self.preNN:
@@ -302,7 +303,7 @@ class ADS_B_Module(tf.Module):
             cat.append(takeoff)
 
         if self.CTX["MERGE_ATTENTION"]:
-            combined = tf.stack([x, map, takeoff], axis=1)  # 结果形状为(256, 3)
+            combined = tf.stack([x, map, takeoff], axis=-1)  # 结果形状为(256, 3)
             x = AttentionMoudule(combined, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                                  ff_dim=self.CTX['FF_DIM'], dropout=0.2)
             x = Flatten()(x)
