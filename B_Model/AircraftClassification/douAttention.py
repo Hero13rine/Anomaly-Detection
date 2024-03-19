@@ -312,6 +312,3 @@ class ADS_B_Module(tf.Module):
         x = self.probability(x)
         return x
 
-# global accuracy mean :  92.0 ( 575 / 625 )
-# global accuracy count :  92.2 ( 576 / 625 )
-# global accuracy max :  87.2 ( 545 / 625 )

@@ -230,6 +230,19 @@ class Trainer(AbstractTrainer):
         Metrics.plotLoss(history[0], history[1], history_avg[0], history_avg[1])
         Metrics.plotLoss(history[2], history[3], history_avg[2], history_avg[3], "accuracy", filename="accuracy.png")
 
+        df_history = pd.DataFrame(history).transpose()
+        df_history_avg = pd.DataFrame(history_avg).transpose()
+
+        # 设置列名
+        df_history.columns = ['train_loss', 'test_loss', 'train_acc', 'test_acc']
+        df_history_avg.columns = ['avg_train_loss', 'avg_test_loss', 'avg_train_acc', 'avg_test_acc']
+
+        # 合并两个DataFrame
+        df = pd.concat([df_history, df_history_avg], axis=1)
+
+        # 保存到CSV文件
+        df.to_csv(f"./_Artifacts/{self.model.name}_history_summary.csv", index=False)
+
         # #  load back best model
         if (len(history[1]) > 0):
             # find best model epoch with history_avg_accuracy 
@@ -300,7 +313,7 @@ class Trainer(AbstractTrainer):
         for i in range(len(files)):
             LEN = 20
             nb = int((i+1)/len(files)*LEN)
-            if i % 10 == 0:
+            if i % 100 == 0:
                 print("预测第{}个".format(i))
 
             file = files[i]
@@ -448,6 +461,24 @@ class Trainer(AbstractTrainer):
 
         # print files of failed predictions
         print("failed files : ")
+        # 写入文件方便后期观察效果
+        with open("./_Artifacts/"+ self.model.name +"eval_result.txt", "w") as file:
+            # Write the formatted strings to the file instead of printing
+            file.write(
+                "class              : " + "|".join([str(a).rjust(6, " ") for a in self.dl.yScaler.classes_]) + "\n")
+            file.write("accuracy per class : " + "|".join(
+                [str(round(a * 100)).rjust(6, " ") for a in accuracy_per_class]) + "\n")
+            file.write("nbSample per class : " + "|".join([str(a).rjust(6, " ") for a in nbSample]) + "\n")
+            file.write("accuracy : " + str(accuracy) + "\n")
+
+            file.write("global accuracy mean : " + str(round(global_correct_mean / global_nb * 100.0, 1)) + " (" + str(
+                global_correct_mean) + "/" + str(global_nb) + ")\n")
+            file.write(
+                "global accuracy count : " + str(round(global_correct_count / global_nb * 100.0, 1)) + " (" + str(
+                    global_correct_count) + "/" + str(global_nb) + ")\n")
+            file.write("global accuracy max : " + str(round(global_correct_max / global_nb * 100.0, 1)) + " (" + str(
+                global_correct_max) + "/" + str(global_nb) + ")\n")
+
         for i in range(len(failed_files)):
             print("\t-",failed_files[i][0], "\tY : ", failed_files[i][1], " Ŷ : ", failed_files[i][2], sep="", flush=True)
 

@@ -154,6 +154,22 @@ class Model(AbstactModel):
             self.model.trainable_variables[i].assign(variables[i])
 
 
+def AttentionMoudule(inputs, head_size, num_heads, ff_dim, dropout=0):
+    # Normalization and Attention
+    x = LayerNormalization(epsilon=1e-6)(inputs)
+    x = MultiHeadAttention(
+        key_dim=head_size, num_heads=num_heads, dropout=dropout
+    )(x, x)
+    x = Dropout(dropout)(x)
+    res = x + inputs
+
+    # Feed Forward Part
+    x = LayerNormalization(epsilon=1e-6)(res)
+    x = Dense(inputs.shape[-1])(x)
+    x = Dropout(dropout)(x)
+    return x + res
+
+
 class TakeOffModule(tf.Module):
     CTX_SIZE = 128
 
@@ -178,6 +194,9 @@ class TakeOffModule(tf.Module):
         self.convNN = convNN
 
     def __call__(self, x):
+        if self.CTX['TAKE_OFF_ATTENTION']:
+            x = AttentionMoudule(x, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+                                 ff_dim=self.CTX['FF_DIM'], dropout=0.2)
         for layer in self.convNN:
             x = layer(x)
         return x
@@ -251,6 +270,7 @@ class ADS_B_Module(tf.Module):
         self.probability = Activation(CTX["ACTIVATION"], name=CTX["ACTIVATION"])
         self.sequence_length = 24
         self.embedding_dim = 32
+
     def attention(self, feature):
         pass
 
@@ -263,7 +283,9 @@ class ADS_B_Module(tf.Module):
             map = x.pop(0)
 
         # preprocess
-        x = adsb
+        x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+                             ff_dim=self.CTX['FF_DIM'], dropout=0.2)
+
         for layer in self.preNN:
             x = layer(x)
         # ...
@@ -279,15 +301,13 @@ class ADS_B_Module(tf.Module):
         if self.CTX["ADD_TAKE_OFF_CONTEXT"]:
             cat.append(takeoff)
 
-        x = self.cat([x, takeoff])
-        x = tf.reshape(x, (-1, 2, 256))
-        x = self.multi_head_attention(x, x)
-        x = self.layer_norm(x)
-        x = Flatten()(x)
-        x = self.catmap([x, map])
-
-        # x = GlobalAveragePooling1D(x)
-
+        if self.CTX["MERGE_ATTENTION"]:
+            combined = tf.stack([x, map, takeoff], axis=1)  # 结果形状为(256, 3)
+            x = AttentionMoudule(combined, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+                                 ff_dim=self.CTX['FF_DIM'], dropout=0.2)
+            x = Flatten()(x)
+        else:
+            x = self.cat([x, map, takeoff])
 
         # get prediction
         for layer in self.convNN:
@@ -295,6 +315,3 @@ class ADS_B_Module(tf.Module):
         x = self.probability(x)
         return x
 
-# global accuracy mean :  92.0 ( 575 / 625 )
-# global accuracy count :  92.2 ( 576 / 625 )
-# global accuracy max :  87.2 ( 545 / 625 )

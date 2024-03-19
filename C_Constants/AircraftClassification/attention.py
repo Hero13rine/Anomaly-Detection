@@ -71,3 +71,8 @@ KEY_DIM = 32
 
 FF_DIM = 64
 
+TAKE_OFF_ATTENTION = True # 网络输入时的attention
+ADSB_ATTENTION = True
+MERGE_ATTENTION = True # 网络合并的网络attention
+
+
