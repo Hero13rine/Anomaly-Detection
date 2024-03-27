@@ -282,11 +282,11 @@ class ADS_B_Module(tf.Module):
         # preprocess
         x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                              ff_dim=self.CTX['FF_DIM'], dropout=0.2)
-        '''
+
         for layer in self.preNN:
             x = layer(x)
         # ...
-        '''
+
         for layer in self.postMap:
             x = layer(x)
 

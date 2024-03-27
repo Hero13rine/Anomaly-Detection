@@ -259,9 +259,9 @@ class ADS_B_Module(tf.Module):
         self.outs = self.CTX["FEATURES_OUT"]
 
         preNN = []
-        for _ in range(self.layers):
+        for _ in range(2):
             preNN.append(Conv1DModule(256, 3, padding=self.CTX["MODEL_PADDING"]))
-        preNN.append(MaxPooling1D())
+            preNN.append(MaxPooling1D())
 
         postMap = []
         for _ in range(self.layers):

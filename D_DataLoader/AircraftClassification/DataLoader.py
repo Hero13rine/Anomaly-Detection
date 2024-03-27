@@ -328,6 +328,10 @@ class DataLoader(AbstractDataLoader):
         somes fragements of the same flight in a defined area to compose a batch.
 
         Called between each epoch by the trainer
+
+        生成模型可直接使用的 x 和 y 输入。
+        从训练子数据集中挑选随机航班，并在指定区域内提取
+        定义区域内的相同航班碎片，组成一个批次。
         """
 
         CTX = self.CTX

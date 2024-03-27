@@ -46,7 +46,7 @@ class Model(AbstactModel):
         Generate a visualization of the model's architecture
     """
 
-    name = "attention2"
+    name = ("Attention_Resnet")
 
     def __init__(self, CTX: dict):
         """
@@ -169,6 +169,21 @@ def AttentionMoudule(inputs, head_size, num_heads, ff_dim, dropout=0):
     x = Dropout(dropout)(x)
     return x + res
 
+def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
+    # Normalization and Attention
+    x = LayerNormalization(epsilon=1e-6)(inputs)
+    x = MultiHeadAttention(
+        key_dim=head_size, num_heads=num_heads, dropout=dropout
+    )(x, x)
+    x = Dropout(dropout)(x)
+    res = x + inputs
+
+    # Feed Forward Part
+    x = LayerNormalization(epsilon=1e-6)(res)
+    x = Conv1D(filters=ff_dim, kernel_size=1, activation="relu")(x)
+    x = Dropout(dropout)(x)
+    x = Conv1D(filters=inputs.shape[-1], kernel_size=1)(x)
+    return x + res
 
 class TakeOffModule(tf.Module):
     CTX_SIZE = 128
@@ -178,18 +193,14 @@ class TakeOffModule(tf.Module):
         self.layers = self.CTX["LAYERS"]
         self.dropout = self.CTX["DROPOUT"]
         self.outs = self.CTX["FEATURES_OUT"]
-        # TODO 根据搜索，attention后加入LayerNormalization层后加入两个FFN层进行残差连接，可以提高记忆性 不懂如何加
 
         convNN = []
         for _ in range(self.layers):
+            convNN.append(Conv1DModule(32, 3, padding=self.CTX["MODEL_PADDING"]))
+        convNN.append(MaxPooling1D())
+        for _ in range(self.layers):
             convNN.append(Conv1DModule(64, 3, padding=self.CTX["MODEL_PADDING"]))
         convNN.append(MaxPooling1D())
-
-        """for _ in range(self.layers):
-            convNN.append(Conv1DModule(64, 3, padding=self.CTX["MODEL_PADDING"]))
-        convNN.append(MaxPooling1D())"""
-
-
         for _ in range(self.layers):
             convNN.append(Conv1DModule(256, 3, padding=self.CTX["MODEL_PADDING"]))
         convNN.append(Flatten())
@@ -198,11 +209,32 @@ class TakeOffModule(tf.Module):
         self.convNN = convNN
 
     def __call__(self, x):
-
-        x = AttentionMoudule(x, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
-                             ff_dim=self.CTX['FF_DIM'], dropout=0.2)
+        if self.CTX['TAKE_OFF_ATTENTION']:
+            x = transformer_encoder(x, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+                                 ff_dim=self.CTX['FF_DIM'], dropout=0.2)
         for layer in self.convNN:
             x = layer(x)
+        return x
+
+
+class ResidualBlock(tf.Module):
+    def __init__(self, filters, kernel_size, padding, strides=(1, 1)):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = tf.keras.layers.Conv2D(filters, kernel_size, padding=padding, strides=strides, activation='relu')
+        self.bn1 = tf.keras.layers.BatchNormalization()
+        self.conv2 = tf.keras.layers.Conv2D(3, kernel_size, padding=padding, activation=None)
+        self.bn2 = tf.keras.layers.BatchNormalization()
+        self.add = tf.keras.layers.Add()
+        self.relu = tf.keras.layers.Activation('relu')
+
+    def __call__(self, x):
+        identity = x
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.add([x, identity])
+        x = self.relu(x)
         return x
 
 
@@ -210,33 +242,23 @@ class MapModule(tf.Module):
 
     def __init__(self, CTX):
         self.CTX = CTX
-        self.layers = 1
         self.dropout = self.CTX["DROPOUT"]
         self.outs = self.CTX["FEATURES_OUT"]
 
-        convNN = []
-        for _ in range(self.layers):
-            convNN.append(Conv2DModule(16, 3, padding=self.CTX["MODEL_PADDING"]))
-        convNN.append(MaxPooling2D())
-        for _ in range(self.layers):
-            convNN.append(Conv2DModule(32, 3, padding=self.CTX["MODEL_PADDING"]))
-        convNN.append(MaxPooling2D())
-        for _ in range(self.layers):
-            convNN.append(Conv2DModule(64, 3, padding=self.CTX["MODEL_PADDING"]))
-
-        # convNN.append(GlobalMaxPooling2D())
-
-        convNN.append(Conv2D(32, (2, 2), (2, 2)))
-        convNN.append(BatchNormalization())
-        convNN.append(Flatten())
-        convNN.append(DenseModule(256, dropout=self.dropout))
-
-        self.convNN = convNN
+        self.convNN = tf.keras.Sequential([
+            ResidualBlock(16, 3, padding=self.CTX["MODEL_PADDING"]),
+            tf.keras.layers.MaxPooling2D(),
+            ResidualBlock(64, 3, padding=self.CTX["MODEL_PADDING"]),
+            tf.keras.layers.Conv2D(32, (2, 2), (2, 2)),
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(256, activation='relu'),
+            tf.keras.layers.Dropout(self.dropout),
+            tf.keras.layers.Dense(self.outs, activation=None)  # Assume self.outs is the final layer size
+        ])
 
     def __call__(self, x):
-        for layer in self.convNN:
-            x = layer(x)
-        return x
+        return self.convNN(x)
 
 
 class ADS_B_Module(tf.Module):
@@ -258,6 +280,9 @@ class ADS_B_Module(tf.Module):
         postMap.append(Flatten())
         postMap.append(DenseModule(256, dropout=self.dropout))
 
+        self.multi_head_attention = MultiHeadAttention(num_heads=8, key_dim=32)
+        self.layer_norm = LayerNormalization(epsilon=1e-6)
+
         self.cat = Concatenate()
         self.catmap = Concatenate()
 
@@ -269,6 +294,11 @@ class ADS_B_Module(tf.Module):
         self.postMap = postMap
         self.convNN = convNN
         self.probability = Activation(CTX["ACTIVATION"], name=CTX["ACTIVATION"])
+        self.sequence_length = 24
+        self.embedding_dim = 32
+
+    def attention(self, feature):
+        pass
 
     def __call__(self, x):
 
@@ -279,31 +309,33 @@ class ADS_B_Module(tf.Module):
             map = x.pop(0)
 
         # preprocess
-        x = AttentionMoudule(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+        if self.CTX["ADSB_ATTENTION"]:
+            x = transformer_encoder(adsb, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
                              ff_dim=self.CTX['FF_DIM'], dropout=0.2)
 
         for layer in self.preNN:
             x = layer(x)
         # ...
-
         for layer in self.postMap:
             x = layer(x)
 
-
-
         # concat takeoff and map
         cat = [x]
-        if (self.CTX["ADD_MAP_CONTEXT"]):
+
+        if self.CTX["ADD_MAP_CONTEXT"]:
             cat.append(map)
-        if (self.CTX["ADD_TAKE_OFF_CONTEXT"]):
+
+        if self.CTX["ADD_TAKE_OFF_CONTEXT"]:
             cat.append(takeoff)
 
-        combined = tf.stack([x, takeoff], axis=-1)
-        x = AttentionMoudule(combined, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
-                              ff_dim=self.CTX['FF_DIM'], dropout=0.2)
-        x = Flatten()(x)
+        if self.CTX["MERGE_ATTENTION"]:
+            combined = tf.stack([x, map, takeoff], axis=-1)  # 结果形状为(256, 3)
+            x = transformer_encoder(combined, head_size=self.CTX['KEY_DIM'], num_heads=self.CTX['NUM_HEADS'],
+                                 ff_dim=self.CTX['FF_DIM'], dropout=0.2)
+            x = Flatten()(x)
+        else:
+            x = self.cat([x, map, takeoff])
 
-        x = self.cat([x, map])
         # get prediction
         for layer in self.convNN:
             x = layer(x)
