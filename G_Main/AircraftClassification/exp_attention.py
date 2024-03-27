@@ -1,7 +1,7 @@
 
 
 # Import the model
-from B_Model.AircraftClassification.attention import Model
+from B_Model.AircraftClassification.Attention_resnet import Model
 
 # Import the context (hyperparameters, constants, etc...)
 import C_Constants.AircraftClassification.attention as CTX

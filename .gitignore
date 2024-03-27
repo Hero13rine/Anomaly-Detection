@@ -1,6 +1,7 @@
 .idea/
 *.zip
 *.parquet
+轨迹/
 
 # personal ssh script to train on remote machine
 scpScript.py

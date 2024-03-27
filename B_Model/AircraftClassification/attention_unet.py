@@ -241,24 +241,41 @@ class ResidualBlock(tf.Module):
 class MapModule(tf.Module):
 
     def __init__(self, CTX):
-        self.CTX = CTX
-        self.dropout = self.CTX["DROPOUT"]
-        self.outs = self.CTX["FEATURES_OUT"]
+        def __init__(self, CTX):
+            self.CTX = CTX
+            self.layers = 1
+            self.dropout = self.CTX["DROPOUT"]
+            self.outs = self.CTX["FEATURES_OUT"]
 
-        self.convNN = tf.keras.Sequential([
-            ResidualBlock(16, 3, padding=self.CTX["MODEL_PADDING"]),
-            tf.keras.layers.MaxPooling2D(),
-            ResidualBlock(64, 3, padding=self.CTX["MODEL_PADDING"]),
-            tf.keras.layers.Conv2D(32, (2, 2), (2, 2)),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dropout(self.dropout),
-            tf.keras.layers.Dense(256, activation=None)  # Assume self.outs is the final layer size
-        ])
+        def __call__(self, x):
+            conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            conv1 = BatchNormalization()(conv1)
+            conv1 = Dropout(0.1)(conv1)
+            pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
-    def __call__(self, x):
-        return self.convNN(x)
+            conv2 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
+            conv2 = BatchNormalization()(conv2)
+            conv2 = Dropout(0.1)(conv2)
+            pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+            up1 = UpSampling2D(size=(2, 2))(pool2)
+            merge1 = concatenate([conv2, up1], axis=3)
+            conv3 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge1)
+            conv3 = BatchNormalization()(conv3)
+
+            up2 = UpSampling2D(size=(2, 2))(conv3)
+            merge2 = concatenate([conv1, up2], axis=3)
+            conv4 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge2)
+            conv4 = BatchNormalization()(conv4)
+            conv5 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
+            dp = Dropout(0.1)(conv5)
+            pool1 = MaxPooling2D(pool_size=(2, 2))(dp)
+            fl = Flatten(name='fla1')(pool1)
+            dense_output = Dense(256, activation='relu')(fl)
+            dropout = Dropout(0.5)(dense_output)
+            dense_output = Dense(128, activation='relu')(dropout)
+            dropout = Dropout(0.5)(dense_output)
+            return dropout
 
 
 class ADS_B_Module(tf.Module):
