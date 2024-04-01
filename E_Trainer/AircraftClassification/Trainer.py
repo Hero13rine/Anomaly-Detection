@@ -393,7 +393,7 @@ class Trainer(AbstractTrainer):
             # change "timestamp" '2022-12-04 11:48:21' to timestamp 1641244101
             # df["timestamp"] = pd.to_datetime(df["timestamp"]).astype(np.int64) // 10**9
 
-            if (pred_max != true and flag < 10):
+            if (pred_max != true or flag < 10):
 
                 failed_files.append((file, str(self.dl.yScaler.classes_[true]), str(self.dl.yScaler.classes_[pred_max])))
                 track = df["track"].values
