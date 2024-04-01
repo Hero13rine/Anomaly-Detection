@@ -89,7 +89,7 @@ class Trainer(AbstractTrainer):
         self.CTX = CTX
 
         self.model:_Model_ = Model(CTX)
-        
+
         try:
             self.model.visualize()
         except Exception as e:
@@ -318,11 +318,10 @@ class Trainer(AbstractTrainer):
         pdf = PdfPages("./_Artifacts/tmp")
 
         failed_files = []
-
         # clear output eval folder
         # os.system("rm ./A_Dataset/AircraftClassification/Outputs/Eval/*")
-
         print("预测开始")
+        flag = 0 # 记录十个正确的
         for i in range(len(files)):
             LEN = 20
             nb = int((i+1)/len(files)*LEN)
@@ -394,7 +393,8 @@ class Trainer(AbstractTrainer):
             # change "timestamp" '2022-12-04 11:48:21' to timestamp 1641244101
             # df["timestamp"] = pd.to_datetime(df["timestamp"]).astype(np.int64) // 10**9
 
-            if (pred_max != true):
+            if (pred_max != true and flag < 10):
+
                 failed_files.append((file, str(self.dl.yScaler.classes_[true]), str(self.dl.yScaler.classes_[pred_max])))
                 track = df["track"].values
                 relative_track = track.copy()
@@ -413,6 +413,7 @@ class Trainer(AbstractTrainer):
                                    y_batches_, self.dl.yScaler.classes_[true], [(relative_track, "relative_track")])
                 pdf.savefig(fig)
                 plt.close(fig)
+                flag = flag + 1
 
 
 

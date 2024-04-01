@@ -46,7 +46,7 @@ class Model(AbstactModel):
         Generate a visualization of the model's architecture
     """
 
-    name = ("Attention_Resnet")
+    name = ("Attention_Unet")
 
     def __init__(self, CTX: dict):
         """
@@ -92,7 +92,7 @@ class Model(AbstactModel):
 
         # generate model
         self.model = tf.keras.Model(inputs, outputs)
-
+        print(self.model.summary())
         # define loss and optimizer
         self.loss = tf.keras.losses.MeanSquaredError()
         self.opt = tf.keras.optimizers.Adam(learning_rate=self.CTX["LEARNING_RATE"])
@@ -241,41 +241,63 @@ class ResidualBlock(tf.Module):
 class MapModule(tf.Module):
 
     def __init__(self, CTX):
-        def __init__(self, CTX):
-            self.CTX = CTX
-            self.layers = 1
-            self.dropout = self.CTX["DROPOUT"]
-            self.outs = self.CTX["FEATURES_OUT"]
+        self.CTX = CTX
+        self.layers = 1
+        self.dropout = self.CTX["DROPOUT"]
+        self.outs = self.CTX["FEATURES_OUT"]
 
-        def __call__(self, x):
-            conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
-            conv1 = BatchNormalization()(conv1)
-            conv1 = Dropout(0.1)(conv1)
-            pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+    def __call__(self, x):
 
-            conv2 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
-            conv2 = BatchNormalization()(conv2)
-            conv2 = Dropout(0.1)(conv2)
-            pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+        conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+        conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
+        pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+        conv2 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
+        conv2 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv2)
+        pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+        conv3 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
+        conv3 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv3)
+        pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+        conv4 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
+        conv4 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
+        drop4 = Dropout(0.5)(conv4)
+        pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
-            up1 = UpSampling2D(size=(2, 2))(pool2)
-            merge1 = concatenate([conv2, up1], axis=3)
-            conv3 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge1)
-            conv3 = BatchNormalization()(conv3)
+        conv5 = Conv2D(1024, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool4)
+        conv5 = Conv2D(1024, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv5)
+        drop5 = Dropout(0.5)(conv5)
 
-            up2 = UpSampling2D(size=(2, 2))(conv3)
-            merge2 = concatenate([conv1, up2], axis=3)
-            conv4 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge2)
-            conv4 = BatchNormalization()(conv4)
-            conv5 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
-            dp = Dropout(0.1)(conv5)
-            pool1 = MaxPooling2D(pool_size=(2, 2))(dp)
-            fl = Flatten(name='fla1')(pool1)
-            dense_output = Dense(256, activation='relu')(fl)
-            dropout = Dropout(0.5)(dense_output)
-            dense_output = Dense(128, activation='relu')(dropout)
-            dropout = Dropout(0.5)(dense_output)
-            return dropout
+        up6 = Conv2D(512, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
+            UpSampling2D(size=(2, 2))(drop5))
+        merge6 = concatenate([drop4, up6], axis=3)
+        conv6 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge6)
+        conv6 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv6)
+
+        up7 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
+            UpSampling2D(size=(2, 2))(conv6))
+        merge7 = concatenate([conv3, up7], axis=3)
+        conv7 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge7)
+        conv7 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv7)
+
+        up8 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
+            UpSampling2D(size=(2, 2))(conv7))
+        merge8 = concatenate([conv2, up8], axis=3)
+        conv8 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge8)
+        conv8 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv8)
+
+        up9 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
+            UpSampling2D(size=(2, 2))(conv8))
+        merge9 = concatenate([conv1, up9], axis=3)
+        conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge9)
+        conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
+        conv9 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
+        dp = Dropout(0.1)(conv9)
+        pool1 = MaxPooling2D(pool_size=(2, 2))(dp)
+        fl = Flatten(name='fla1')(pool1)
+        dense_output = Dense(256, activation='relu')(fl)
+        dropout = Dropout(0.5)(dense_output)
+        dense_output = Dense(256, activation='relu')(dropout)
+        dropout = Dropout(0.5)(dense_output)
+        return dropout
 
 
 class ADS_B_Module(tf.Module):
